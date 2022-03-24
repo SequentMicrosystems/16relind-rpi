@@ -1,5 +1,5 @@
 # 16relind-rpi
-This is the command line and python functions to control the [Sixteen RELAYS 8-Layer Stackable HAT for Raspberry Pi](https://sequentmicrosystems.com/collections/all-io-cards/products/sixteen-relays-8-layer-stackable-hat-br-for-raspberry-pi?variant=42476428296444).
+This is the command line to control the [Sixteen RELAYS 8-Layer Stackable HAT for Raspberry Pi](https://sequentmicrosystems.com/collections/all-io-cards/products/sixteen-relays-8-layer-stackable-hat-br-for-raspberry-pi?variant=42476428296444).
 
 Don't forget to enable I2C communication:
 ```bash
