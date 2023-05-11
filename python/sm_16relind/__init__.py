@@ -24,6 +24,7 @@ class SM16relind:
             val = bus.read_word_data(self._hw_address_, _CFG_REG_ADD)
             if val != 0:
                 val = 0
+                bus.write_word_data(self._hw_address_, _OUTPORT_REG_ADD, val)
                 bus.write_word_data(self._hw_address_, _CFG_REG_ADD, val)
         except Exception as e:
             bus.close()

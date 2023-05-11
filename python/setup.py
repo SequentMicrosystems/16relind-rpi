@@ -7,7 +7,7 @@ with open("README.md", "r") as fh:
 setuptools.setup(
     name='sm_16relind',
     packages=setuptools.find_packages(),
-    version='1.0.1',
+    version='1.0.2',
     license='MIT',
     description='Library for Sequent Microsystems Sixteen Relays 8-Layer Stackable HAT for Raspberry Pi',
     author='Sequent Microsystems',
