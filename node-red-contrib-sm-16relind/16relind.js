@@ -153,8 +153,8 @@ module.exports = function(RED) {
             var stack = node.stack;
             if (isNaN(stack)) stack = msg.stack;
             stack = parseInt(stack);
-            var relay = node.relay;
-            if (isNaN(relay)) relay = msg.relay;
+            var relay = msg.relay;
+            if (isNaN(relay)) relay = node.relay;
             relay = parseInt(relay);
             //var buffcount = parseInt(node.count);
             if (isNaN(stack + 1)) {
