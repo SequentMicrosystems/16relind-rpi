@@ -35,7 +35,7 @@ install: 16relind
 	$Q echo "[Install]"
 	$Q cp 16relind		$(DESTDIR)$(PREFIX)/bin
 ifneq ($(WIRINGPI_SUID),0)
-	$Q chown root.root	$(DESTDIR)$(PREFIX)/bin/16relind
+	$Q chown root:root	$(DESTDIR)$(PREFIX)/bin/16relind
 	$Q chmod 4755		$(DESTDIR)$(PREFIX)/bin/16relind
 endif
 #	$Q mkdir -p		$(DESTDIR)$(PREFIX)/man/man1
