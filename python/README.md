@@ -5,6 +5,30 @@ This is the python library to control the [Sixteen Relays 8-Layer Stackable HAT 
 ## Install
 
 ```bash
+sudo pip install SM16relind
+```
+
+or (if using python3.x):
+
+```bash
+sudo pip3 install SM16relind
+```
+
+## Update
+
+```bash
+sudo pip install SM16relind -U
+```
+
+or (if using python3.x):
+
+```bash
+sudo pip3 install SM16relind -U
+```
+
+### Manual installation (without pip)
+
+```bash
 ~$ sudo apt-get update
 ~$ sudo apt-get install build-essential python-pip python-dev python-smbus git
 ~$ git clone https://github.com/SequentMicrosystems/16relind-rpi.git
@@ -15,7 +39,8 @@ If you use python3.x repace the last line with:
 ```
 ~/16relind-rpi/python$ sudo python3 setup.py install
 ```
-## Update
+
+### Manual update (only if installed without pip)
 
 ```bash
 ~$ cd 16relind-rpi/
@@ -27,6 +52,7 @@ If you use python3.x repace the last line with:
 ```
 ~/16relind-rpi/python$ sudo python3 setup.py install
 ```
+
 ## Usage example
 
 ```bash
