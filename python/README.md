@@ -1,4 +1,4 @@
-# sm_16relind
+# SM16relind
 
 This is the python library to control the [Sixteen Relays 8-Layer Stackable HAT for Raspberry Pi](https://sequentmicrosystems.com/collections/all-io-cards/products/sixteen-relays-8-layer-stackable-hat-for-raspberry-pi).
 
@@ -33,8 +33,8 @@ If you use python3.x repace the last line with:
 ~$ python
 Python 3.10.7 (main, Nov  7 2022, 22:59:03) [GCC 8.3.0] on linux
 Type "help", "copyright", "credits" or "license" for more information.
->>> import sm_16relind
->>> rel = sm_16relind.SM16relind(0)
+>>> import SM16relind
+>>> rel = SM16relind.SM16relind(0)
 >>> rel.set(1, 1)
 >>> rel.get_all()
 1
@@ -45,7 +45,7 @@ More usage example in the [examples](examples/) folder
 
 ## Functions prototype
 
-### *class sm_16relind.SM16relind(stack = 0, i2c = 1)*
+### *class SM16relind.SM16relind(stack = 0, i2c = 1)*
 * Description
   * Init the SM16relind object and check the card presence 
 * Parameters
