@@ -17,12 +17,22 @@
 #include "comm.h"
 #include "thread.h"
 
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <semaphore.h>
+#include <time.h>
+#include <errno.h>
+
 #define VERSION_BASE	(int)1
 #define VERSION_MAJOR	(int)1
-#define VERSION_MINOR	(int)0
+#define VERSION_MINOR	(int)1
 
 #define UNUSED(X) (void)X      /* To avoid gcc/g++ warnings */
 #define CMD_ARRAY_SIZE	7
+
+#define THREAD_SAFE
+
+#define TIMEOUT_S 3
 
 const u16 relayMaskRemap[16] =
 {
@@ -782,6 +792,57 @@ static void cliInit(void)
 
 }
 
+int waitForI2C(sem_t *sem)
+{
+  int semVal = 2;
+  struct timespec ts;
+  int s = 0;
+
+#ifdef DEBUG_SEM
+	sem_getvalue(sem, &semVal);
+	printf("Semaphore initial value %d\n", semVal);
+	semVal = 2;
+#endif
+	while (semVal > 0)
+	{
+    if (clock_gettime(CLOCK_REALTIME, &ts) == -1)
+    {
+        /* handle error */
+        printf("Fail to read time \n");
+        return -1;
+    }
+    ts.tv_sec += TIMEOUT_S;
+    while ((s = sem_timedwait(sem, &ts)) == -1 && errno == EINTR)
+               continue;       /* Restart if interrupted by handler */
+		sem_getvalue(sem, &semVal);
+	}
+#ifdef DEBUG_SEM
+	sem_getvalue(sem, &semVal);
+	printf("Semaphore after wait %d\n", semVal);
+#endif
+  return 0;
+}
+
+
+int releaseI2C(sem_t *sem)
+{
+  int semVal = 2;
+  sem_getvalue(sem, &semVal);
+	if (semVal < 1)
+	{
+		 if (sem_post(sem) == -1)
+		 {
+			 printf("Fail to post SMI2C_SEM \n");
+       return -1;
+		 }
+	}
+#ifdef DEBUG_SEM
+	sem_getvalue(sem, &semVal);
+	printf("Semaphore after post %d\n", semVal);
+#endif
+return 0;
+}
+
 int main(int argc, char *argv[])
 {
 	int i = 0;
@@ -793,6 +854,10 @@ int main(int argc, char *argv[])
 		printf("%s\n", usage);
 		return 1;
 	}
+#ifdef THREAD_SAFE
+	sem_t *semaphore = sem_open("/SMI2C_SEM", O_CREAT, 0000666, 3);
+	waitForI2C(semaphore);
+#endif
 	for (i = 0; i < CMD_ARRAY_SIZE; i++)
 	{
 		if ( (gCmdArray[i].name != NULL) && (gCmdArray[i].namePos < argc))
@@ -800,12 +865,17 @@ int main(int argc, char *argv[])
 			if (strcasecmp(argv[gCmdArray[i].namePos], gCmdArray[i].name) == 0)
 			{
 				gCmdArray[i].pFunc(argc, argv);
+#ifdef THREAD_SAFE
+			 releaseI2C(semaphore);
+#endif
 				return 0;
 			}
 		}
 	}
 	printf("Invalid command option\n");
 	printf("%s\n", usage);
-
+#ifdef THREAD_SAFE
+			 releaseI2C(semaphore);
+#endif
 	return 0;
 }
