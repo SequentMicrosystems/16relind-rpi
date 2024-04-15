@@ -28,129 +28,73 @@
 #define VERSION_MINOR	(int)1
 
 #define UNUSED(X) (void)X      /* To avoid gcc/g++ warnings */
-#define CMD_ARRAY_SIZE	7
+#define CMD_ARRAY_SIZE	8
 
 #define THREAD_SAFE
 
 #define TIMEOUT_S 3
 
-const u16 relayMaskRemap[16] =
-{
-	0x8000,
-	0x4000,
-	0x2000,
-	0x1000,
-	0x800,
-	0x400,
-	0x200,
-	0x100,
-	0x80,
-	0x40,
-	0x20,
-	0x10,
-	0x8,
-	0x4,
-	0x2,
-	0x1};
-const int relayChRemap[16] =
-{
-	15,
-	14,
-	13,
-	12,
-	11,
-	10,
-	9,
-	8,
-	7,
-	6,
-	5,
-	4,
-	3,
-	2,
-	1,
+const u16 relayMaskRemap[16] = {0x8000, 0x4000, 0x2000, 0x1000, 0x800, 0x400,
+	0x200, 0x100, 0x80, 0x40, 0x20, 0x10, 0x8, 0x4, 0x2, 0x1};
+const int relayChRemap[16] = {15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1,
 	0};
 
 int relayChSet(int dev, u8 channel, OutStateEnumType state);
-int relayChGet(int dev, u8 channel, OutStateEnumType* state);
+int relayChGet(int dev, u8 channel, OutStateEnumType *state);
 u16 relayToIO(u16 relay);
 u16 IOToRelay(u16 io);
 
 static void doHelp(int argc, char *argv[]);
 const CliCmdType CMD_HELP =
-	{
-		"-h",
-		1,
-		&doHelp,
-		"\t-h          Display the list of command options or one command option details\n",
-		"\tUsage:      16relind -h    Display command options list\n",
-		"\tUsage:      16relind -h <param>   Display help for <param> command option\n",
-		"\tExample:    16relind -h write    Display help for \"write\" command option\n"};
+	{"-h", 1, &doHelp,
+		"\t-h           Display the list of command options or one command option details\n",
+		"\tUsage:       16relind -h    Display command options list\n",
+		"\tUsage:       16relind -h <param>   Display help for <param> command option\n",
+		"\tExample:     16relind -h write    Display help for \"write\" command option\n"};
 
 static void doVersion(int argc, char *argv[]);
-const CliCmdType CMD_VERSION =
-{
-	"-v",
-	1,
-	&doVersion,
-	"\t-v              Display the version number\n",
-	"\tUsage:          16relind -v\n",
-	"",
-	"\tExample:        16relind -v  Display the version number\n"};
+const CliCmdType CMD_VERSION = {"-v", 1, &doVersion,
+	"\t-v           Display the version number\n",
+	"\tUsage:       16relind -v\n", "",
+	"\tExample:     16relind -v  Display the version number\n"};
 
-static void doWarranty(int argc, char* argv[]);
-const CliCmdType CMD_WAR =
-{
-	"-warranty",
-	1,
-	&doWarranty,
-	"\t-warranty       Display the warranty\n",
-	"\tUsage:          16relind -warranty\n",
-	"",
-	"\tExample:        16relind -warranty  Display the warranty text\n"};
+static void doWarranty(int argc, char *argv[]);
+const CliCmdType CMD_WAR = {"-warranty", 1, &doWarranty,
+	"\t-warranty    Display the warranty\n",
+	"\tUsage:       16relind -warranty\n", "",
+	"\tExample:     16relind -warranty  Display the warranty text\n"};
 
 static void doList(int argc, char *argv[]);
 const CliCmdType CMD_LIST =
-	{
-		"-list",
-		1,
-		&doList,
-		"\t-list:       List all 16relind boards connected,\n\treturn       nr of boards and stack level for every board\n",
-		"\tUsage:       16relind -list\n",
-		"",
-		"\tExample:     16relind -list display: 1,0 \n"};
+	{"-list", 1, &doList,
+	"\t-list:       List all 16relind boards connected, returnsb oards no and stack level for every board\n",
+	"\tUsage:       16relind -list\n", "",
+	"\tExample:     16relind -list display: 1,0 \n"};
 
 static void doRelayWrite(int argc, char *argv[]);
-const CliCmdType CMD_WRITE =
-{
-	"write",
-	2,
-	&doRelayWrite,
+const CliCmdType CMD_WRITE = {"write", 2, &doRelayWrite,
 	"\twrite:       Set relays On/Off\n",
 	"\tUsage:       16relind <id> write <channel> <on/off>\n",
 	"\tUsage:       16relind <id> write <value>\n",
 	"\tExample:     16relind 0 write 2 On; Set Relay #2 on Board #0 On\n"};
 
 static void doRelayRead(int argc, char *argv[]);
-const CliCmdType CMD_READ =
-{
-	"read",
-	2,
-	&doRelayRead,
+const CliCmdType CMD_READ = {"read", 2, &doRelayRead,
 	"\tread:        Read relays status\n",
 	"\tUsage:       16relind <id> read <channel>\n",
 	"\tUsage:       16relind <id> read\n",
 	"\tExample:     16relind 0 read 2; Read Status of Relay #2 on Board #0\n"};
 
-static void doTest(int argc, char* argv[]);
-const CliCmdType CMD_TEST =
-{
-	"test",
-	2,
-	&doTest,
+static void doLedSet(int argc, char *argv[]);
+const CliCmdType CMD_LED_BLINK = {"pled", 2, &doLedSet,
+	"\tpled:        Set the power led mode (blink | on | off) \n",
+	"\tUsage:       16relind <id> pled <blink/off/on>\n", "",
+	"\tExample:     16relind 0 pled on; Set power led to always on state \n"};
+
+static void doTest(int argc, char *argv[]);
+const CliCmdType CMD_TEST = {"test", 2, &doTest,
 	"\ttest:        Turn ON and OFF the relays until press a key\n",
-	"",
-	"\tUsage:       16relind <id> test\n",
+	"\tUsage:       16relind <id> test\n", " ",
 	"\tExample:     16relind 0 test\n"};
 
 CliCmdType gCmdArray[CMD_ARRAY_SIZE];
@@ -244,11 +188,11 @@ int relayChSet(int dev, u8 channel, OutStateEnumType state)
 	return resp;
 }
 
-int relayChGet(int dev, u8 channel, OutStateEnumType* state)
+int relayChGet(int dev, u8 channel, OutStateEnumType *state)
 {
 	u8 buff[2];
 	u16 val;
-	
+
 	if (NULL == state)
 	{
 		return ERROR;
@@ -280,14 +224,14 @@ int relaySet(int dev, int val)
 {
 	u8 buff[2];
 	u16 rVal = 0;
-	
+
 	rVal = relayToIO(0xffff & val);
 	memcpy(buff, &rVal, 2);
 
 	return i2cMem8Write(dev, RELAY16_OUTPORT_REG_ADD, buff, 2);
 }
 
-int relayGet(int dev, int* val)
+int relayGet(int dev, int *val)
 {
 	u8 buff[2];
 	u16 rVal = 0;
@@ -545,6 +489,50 @@ static void doRelayRead(int argc, char *argv[])
 	}
 }
 
+static void doLedSet(int argc, char *argv[])
+{
+	int dev = 0;
+	uint8_t buff[2];
+
+	if (argc == 4)
+	{
+		dev = doBoardInit(atoi(argv[1]));
+		if (dev <= 0)
+		{
+			exit(1);
+		}
+		if (strcasecmp(argv[3], "on") == 0)
+		{
+			buff[0] = 1;
+		}
+		else if (strcasecmp(argv[3], "off") == 0)
+		{
+			buff[0] = 2;
+		}
+		else if (strcasecmp(argv[3], "blink") == 0)
+		{
+			buff[0] = 0;
+		}
+		else
+		{
+			printf("Invalid led mode (blink/on/off)\n");
+			exit(1);
+		}
+		if (0 > i2cMem8Write(dev, I2C_MEM_LED_MODE, buff, 1))
+		{
+			printf(
+				"Fail to write, check if your card version supports the command\n");
+			exit(1);
+		}
+
+	}
+	else
+	{
+		printf("%s", CMD_LED_BLINK.usage1);
+		exit(1);
+	}
+}
+
 static void doHelp(int argc, char *argv[])
 {
 	int i = 0;
@@ -565,12 +553,18 @@ static void doHelp(int argc, char *argv[])
 		if (CMD_ARRAY_SIZE == i)
 		{
 			printf("Option \"%s\" not found\n", argv[2]);
-			printf("%s: %s\n", argv[0], usage);
+			for (i = 0; i < CMD_ARRAY_SIZE; i++)
+			{
+				printf("%s", gCmdArray[i].help);
+			}
 		}
 	}
 	else
 	{
-		printf("%s: %s\n", argv[0], usage);
+		for (i = 0; i < CMD_ARRAY_SIZE; i++)
+		{
+			printf("%s", gCmdArray[i].help);
+		}
 	}
 }
 
@@ -626,7 +620,7 @@ static void doList(int argc, char *argv[])
 /* 
  * Self test for production
  */
-static void doTest(int argc, char* argv[])
+static void doTest(int argc, char *argv[])
 {
 	int dev = 0;
 	int i = 0;
@@ -634,18 +628,9 @@ static void doTest(int argc, char* argv[])
 	int relVal;
 	int valR;
 	int relayResult = 0;
-	FILE* file = NULL;
-	const u8 relayOrder[16] =
-	{
-		1,
-		2,
-		3,
-		4,
-		5,
-		6,
-		7,
-		8,
-	9,10,11,12,13,14,15,16};
+	FILE *file = NULL;
+	const u8 relayOrder[16] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15,
+		16};
 
 	dev = doBoardInit(atoi(argv[1]));
 	if (dev <= 0)
@@ -786,6 +771,8 @@ static void cliInit(void)
 	i++;
 	memcpy(&gCmdArray[i], &CMD_READ, sizeof(CliCmdType));
 	i++;
+	memcpy(&gCmdArray[i], &CMD_LED_BLINK, sizeof(CliCmdType));
+	i++;
 	memcpy(&gCmdArray[i], &CMD_TEST, sizeof(CliCmdType));
 	i++;
 	memcpy(&gCmdArray[i], &CMD_VERSION, sizeof(CliCmdType));
@@ -794,9 +781,9 @@ static void cliInit(void)
 
 int waitForI2C(sem_t *sem)
 {
-  int semVal = 2;
-  struct timespec ts;
-  int s = 0;
+	int semVal = 2;
+	struct timespec ts;
+	int s = 0;
 
 #ifdef DEBUG_SEM
 	sem_getvalue(sem, &semVal);
@@ -805,42 +792,41 @@ int waitForI2C(sem_t *sem)
 #endif
 	while (semVal > 0)
 	{
-    if (clock_gettime(CLOCK_REALTIME, &ts) == -1)
-    {
-        /* handle error */
-        printf("Fail to read time \n");
-        return -1;
-    }
-    ts.tv_sec += TIMEOUT_S;
-    while ((s = sem_timedwait(sem, &ts)) == -1 && errno == EINTR)
-               continue;       /* Restart if interrupted by handler */
+		if (clock_gettime(CLOCK_REALTIME, &ts) == -1)
+		{
+			/* handle error */
+			printf("Fail to read time \n");
+			return -1;
+		}
+		ts.tv_sec += TIMEOUT_S;
+		while ( (s = sem_timedwait(sem, &ts)) == -1 && errno == EINTR)
+			continue; /* Restart if interrupted by handler */
 		sem_getvalue(sem, &semVal);
 	}
 #ifdef DEBUG_SEM
 	sem_getvalue(sem, &semVal);
 	printf("Semaphore after wait %d\n", semVal);
 #endif
-  return 0;
+	return 0;
 }
-
 
 int releaseI2C(sem_t *sem)
 {
-  int semVal = 2;
-  sem_getvalue(sem, &semVal);
+	int semVal = 2;
+	sem_getvalue(sem, &semVal);
 	if (semVal < 1)
 	{
-		 if (sem_post(sem) == -1)
-		 {
-			 printf("Fail to post SMI2C_SEM \n");
-       return -1;
-		 }
+		if (sem_post(sem) == -1)
+		{
+			printf("Fail to post SMI2C_SEM \n");
+			return -1;
+		}
 	}
 #ifdef DEBUG_SEM
 	sem_getvalue(sem, &semVal);
 	printf("Semaphore after post %d\n", semVal);
 #endif
-return 0;
+	return 0;
 }
 
 int main(int argc, char *argv[])
@@ -851,7 +837,10 @@ int main(int argc, char *argv[])
 
 	if (argc == 1)
 	{
-		printf("%s\n", usage);
+		for (i = 0; i < CMD_ARRAY_SIZE; i++)
+		{
+			printf("%s", gCmdArray[i].help);
+		}
 		return 1;
 	}
 #ifdef THREAD_SAFE
@@ -866,16 +855,19 @@ int main(int argc, char *argv[])
 			{
 				gCmdArray[i].pFunc(argc, argv);
 #ifdef THREAD_SAFE
-			 releaseI2C(semaphore);
+				releaseI2C(semaphore);
 #endif
 				return 0;
 			}
 		}
 	}
 	printf("Invalid command option\n");
-	printf("%s\n", usage);
+	for (i = 0; i < CMD_ARRAY_SIZE; i++)
+	{
+		printf("%s", gCmdArray[i].help);
+	}
 #ifdef THREAD_SAFE
-			 releaseI2C(semaphore);
+	releaseI2C(semaphore);
 #endif
 	return 0;
 }
