@@ -16,10 +16,14 @@
 #define OK		0
 #define FAIL	-1
 
+#define WDT_RESET_SIGNATURE 	0xCA
+#define WDT_MAX_OFF_INTERVAL_S 4147200 //48 days
+
 #define RELAY16_HW_I2C_BASE_ADD	0x20
 #define RELAY16_HW_I2C_ALTERNATE_BASE_ADD 0x38
 typedef uint8_t u8;
 typedef uint16_t u16;
+typedef uint32_t u32;
 
 
 enum
@@ -72,5 +76,16 @@ typedef struct
  const char* usage2;
  const char* example;
 }CliCmdType;
+
+typedef struct
+	__attribute__((packed))
+	{
+		unsigned int mbBaud :24;
+		unsigned int mbType :4;
+		unsigned int mbParity :2;
+		unsigned int mbStopB :2;
+		unsigned int add:8;
+	} ModbusSetingsType;
+
 
 #endif //RELAY_H_

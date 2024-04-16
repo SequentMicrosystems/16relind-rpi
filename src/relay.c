@@ -25,7 +25,7 @@
 
 #define VERSION_BASE	(int)1
 #define VERSION_MAJOR	(int)1
-#define VERSION_MINOR	(int)1
+#define VERSION_MINOR	(int)2
 
 #define UNUSED(X) (void)X      /* To avoid gcc/g++ warnings */
 #define CMD_ARRAY_SIZE	8
@@ -67,9 +67,9 @@ const CliCmdType CMD_WAR = {"-warranty", 1, &doWarranty,
 static void doList(int argc, char *argv[]);
 const CliCmdType CMD_LIST =
 	{"-list", 1, &doList,
-	"\t-list:       List all 16relind boards connected, returnsb oards no and stack level for every board\n",
-	"\tUsage:       16relind -list\n", "",
-	"\tExample:     16relind -list display: 1,0 \n"};
+		"\t-list:       List all 16relind boards connected, returnsb oards no and stack level for every board\n",
+		"\tUsage:       16relind -list\n", "",
+		"\tExample:     16relind -list display: 1,0 \n"};
 
 static void doRelayWrite(int argc, char *argv[]);
 const CliCmdType CMD_WRITE = {"write", 2, &doRelayWrite,
@@ -96,8 +96,6 @@ const CliCmdType CMD_TEST = {"test", 2, &doTest,
 	"\ttest:        Turn ON and OFF the relays until press a key\n",
 	"\tUsage:       16relind <id> test\n", " ",
 	"\tExample:     16relind 0 test\n"};
-
-CliCmdType gCmdArray[CMD_ARRAY_SIZE];
 
 char *usage = "Usage:	 16relind -h <command>\n"
 	"         16relind -v\n"
@@ -533,37 +531,489 @@ static void doLedSet(int argc, char *argv[])
 	}
 }
 
+//************************************************************* WDT *************************************************
+
+void doWdtReload(int argc, char *argv[]);
+const CliCmdType CMD_WDT_RELOAD =
+	{"wdtr", 2, &doWdtReload,
+		"\twdtr:		Reload the watchdog timer and enable the watchdog if is disabled\n",
+		"\tUsage:		16relind <stack> wdtr\n", "",
+		"\tExample:		16relind 0 wdtr; Reload the watchdog timer on Board #0 with the period \n"};
+
+void doWdtReload(int argc, char *argv[])
+{
+	int dev = 0;
+	u8 buff[2] = {0, 0};
+
+	dev = doBoardInit(atoi(argv[1]));
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+
+	if (argc == 3)
+	{
+		buff[0] = WDT_RESET_SIGNATURE;
+		if (OK != i2cMem8Write(dev, I2C_MEM_WDT_RESET_ADD, buff, 1))
+		{
+			printf("Fail to write watchdog reset key!\n");
+			exit(1);
+		}
+	}
+	else
+	{
+		printf("Invalid params number:\n %s", CMD_WDT_RELOAD.usage1);
+		exit(1);
+	}
+}
+
+void doWdtSetPeriod(int argc, char *argv[]);
+const CliCmdType CMD_WDT_SET_PERIOD =
+	{"wdtpwr", 2, &doWdtSetPeriod,
+		"\twdtpwr:		Set the watchdog period in seconds, reload command must be issue in this interval to prevent Raspberry Pi power off\n",
+		"\tUsage:		16relind <stack> wdtpwr <val> \n", "",
+		"\tExample:		16relind 0 wdtpwr 10; Set the watchdog timer period on Board #0 at 10 seconds \n"};
+
+void doWdtSetPeriod(int argc, char *argv[])
+{
+	int dev = 0;
+	u16 period;
+	u8 buff[2] = {0, 0};
+
+	dev = doBoardInit(atoi(argv[1]));
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+
+	if (argc == 4)
+	{
+		period = (u16)atoi(argv[3]);
+		if (0 == period)
+		{
+			printf("Invalid period!\n");
+			exit(1);
+		}
+		memcpy(buff, &period, 2);
+		if (OK != i2cMem8Write(dev, I2C_MEM_WDT_INTERVAL_SET_ADD, buff, 2))
+		{
+			printf("Fail to write watchdog period!\n");
+			exit(1);
+		}
+	}
+	else
+	{
+		printf("Invalid params number:\n %s", CMD_WDT_SET_PERIOD.usage1);
+		exit(1);
+	}
+
+}
+
+void doWdtGetPeriod(int argc, char *argv[]);
+const CliCmdType CMD_WDT_GET_PERIOD =
+	{"wdtprd", 2, &doWdtGetPeriod,
+		"\twdtprd:		Get the watchdog period in seconds, reload command must be issue in this interval to prevent Raspberry Pi power off\n",
+		"\tUsage:		16relind <stack> wdtprd \n", "",
+		"\tExample:		16relind 0 wdtprd; Get the watchdog timer period on Board #0\n"};
+
+void doWdtGetPeriod(int argc, char *argv[])
+{
+	int dev = 0;
+	u16 period;
+	u8 buff[2];
+
+	dev = doBoardInit(atoi(argv[1]));
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+
+	if (argc == 3)
+	{
+		if (OK != i2cMem8Read(dev, I2C_MEM_WDT_INTERVAL_GET_ADD, buff, 2))
+		{
+			printf("Fail to read watchdog period!\n");
+			exit(1);
+		}
+		memcpy(&period, buff, 2);
+		printf("%d\n", (int)period);
+	}
+	else
+	{
+		printf("Invalid params number:\n %s", CMD_WDT_GET_PERIOD.usage1);
+		exit(1);
+	}
+
+}
+
+void doWdtSetInitPeriod(int argc, char *argv[]);
+const CliCmdType CMD_WDT_SET_INIT_PERIOD =
+	{"wdtipwr", 2, &doWdtSetInitPeriod,
+		"\twdtipwr:	Set the watchdog initial period in seconds, This period is loaded after power cycle, giving Raspberry time to boot\n",
+		"\tUsage:		16relind <stack> wdtipwr <val> \n", "",
+		"\tExample:		16relind 0 wdtipwr 10; Set the watchdog timer initial period on Board #0 at 10 seconds \n"};
+
+void doWdtSetInitPeriod(int argc, char *argv[])
+{
+	int dev = 0;
+	u16 period;
+	u8 buff[2] = {0, 0};
+
+	dev = doBoardInit(atoi(argv[1]));
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+
+	if (argc == 4)
+	{
+		period = (u16)atoi(argv[3]);
+		if (0 == period)
+		{
+			printf("Invalid period!\n");
+			exit(1);
+		}
+		memcpy(buff, &period, 2);
+		if (OK != i2cMem8Write(dev, I2C_MEM_WDT_INIT_INTERVAL_SET_ADD, buff, 2))
+		{
+			printf("Fail to write watchdog period!\n");
+			exit(1);
+		}
+	}
+	else
+	{
+		printf("Invalid params number:\n %s", CMD_WDT_SET_INIT_PERIOD.usage1);
+		exit(1);
+	}
+
+}
+
+void doWdtGetInitPeriod(int argc, char *argv[]);
+const CliCmdType CMD_WDT_GET_INIT_PERIOD =
+	{"wdtiprd", 2, &doWdtGetInitPeriod,
+		"\twdtiprd:	Get the watchdog initial period in seconds. This period is loaded after power cycle, giving Raspberry time to boot\n",
+		"\tUsage:		16relind <stack> wdtiprd \n", "",
+		"\tExample:		16relind 0 wdtiprd; Get the watchdog timer initial period on Board #0\n"};
+
+void doWdtGetInitPeriod(int argc, char *argv[])
+{
+	int dev = 0;
+	u16 period;
+	u8 buff[2];
+
+	dev = doBoardInit(atoi(argv[1]));
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+
+	if (argc == 3)
+	{
+		if (OK != i2cMem8Read(dev, I2C_MEM_WDT_INIT_INTERVAL_GET_ADD, buff, 2))
+		{
+			printf("Fail to read watchdog period!\n");
+			exit(1);
+		}
+		memcpy(&period, buff, 2);
+		printf("%d\n", (int)period);
+	}
+	else
+	{
+		printf("Invalid params number:\n %s", CMD_WDT_GET_INIT_PERIOD.usage1);
+		exit(1);
+	}
+
+}
+
+void doWdtSetOffPeriod(int argc, char *argv[]);
+const CliCmdType CMD_WDT_SET_OFF_PERIOD =
+	{"wdtopwr", 2, &doWdtSetOffPeriod,
+		"\twdtopwr:	Set the watchdog off period in seconds (max 48 days), This is the time that watchdog mantain Raspberry turned off \n",
+		"\tUsage:		16relind <stack> wdtopwr <val> \n", "",
+		"\tExample:		16relind 0 wdtopwr 10; Set the watchdog off interval on Board #0 at 10 seconds \n"};
+
+void doWdtSetOffPeriod(int argc, char *argv[])
+{
+	int dev = 0;
+	u32 period;
+	u8 buff[4] = {0, 0, 0, 0};
+
+	dev = doBoardInit(atoi(argv[1]));
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+
+	if (argc == 4)
+	{
+		period = (u32)atoi(argv[3]);
+		if ( (0 == period) || (period > WDT_MAX_OFF_INTERVAL_S))
+		{
+			printf("Invalid period!\n");
+			exit(1);
+		}
+		memcpy(buff, &period, 4);
+		if (OK
+			!= i2cMem8Write(dev, I2C_MEM_WDT_POWER_OFF_INTERVAL_SET_ADD, buff, 4))
+		{
+			printf("Fail to write watchdog period!\n");
+			exit(1);
+		}
+	}
+	else
+	{
+		printf("Invalid params number:\n %s", CMD_WDT_SET_OFF_PERIOD.usage1);
+		exit(1);
+	}
+
+}
+
+void doWdtGetOffPeriod(int argc, char *argv[]);
+const CliCmdType CMD_WDT_GET_OFF_PERIOD =
+	{"wdtoprd", 2, &doWdtGetOffPeriod,
+		"\twdtoprd:	Get the watchdog off period in seconds (max 48 days), This is the time that watchdog mantain Raspberry turned off \n",
+		"\tUsage:		16relind <stack> wdtoprd \n", "",
+		"\tExample:		16relind 0 wdtoprd; Get the watchdog off period on Board #0\n"};
+
+void doWdtGetOffPeriod(int argc, char *argv[])
+{
+	int dev = 0;
+	u32 period;
+	u8 buff[4];
+
+	dev = doBoardInit(atoi(argv[1]));
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+
+	if (argc == 3)
+	{
+		if (OK
+			!= i2cMem8Read(dev, I2C_MEM_WDT_POWER_OFF_INTERVAL_GET_ADD, buff, 4))
+		{
+			printf("Fail to read watchdog period!\n");
+			exit(1);
+		}
+		memcpy(&period, buff, 4);
+		printf("%d\n", (int)period);
+	}
+	else
+	{
+		printf("Invalid params number:\n %s", CMD_WDT_GET_OFF_PERIOD.usage1);
+		exit(1);
+	}
+
+}
+
+//********************************************** RS485 *******************************************************
+
+int cfg485Set(int dev, u8 mode, u32 baud, u8 stopB, u8 parity, u8 add)
+{
+	ModbusSetingsType settings;
+	u8 buff[5];
+
+	if (mode > 1)
+	{
+		printf("Invalid RS485 mode : 0 = disable, 1= Modbus RTU (Slave)!\n");
+		return ERROR;
+	}
+
+	if (baud > 921600 || baud < 1200)
+	{
+		if (mode == 0)
+		{
+			baud = 38400;
+		}
+		else
+		{
+			printf("Invalid RS485 Baudrate [1200, 921600]!\n");
+			return ERROR;
+		}
+	}
+
+	if (stopB < 1 || stopB > 2)
+	{
+		if (mode == 0)
+		{
+			stopB = 1;
+		}
+		else
+		{
+			printf("Invalid RS485 stop bits [1, 2]!\n");
+			return ERROR;
+		}
+	}
+
+	if (parity > 2)
+	{
+		if (mode == 0)
+		{
+			parity = 0;
+		}
+		else
+		{
+			printf("Invalid RS485 parity 0 = none; 1 = even; 2 = odd! \n");
+			return ERROR;
+		}
+	}
+	if (add < 1)
+	{
+		if (mode == 0)
+		{
+			add = 1;
+		}
+		else
+		{
+			printf("Invalid MODBUS device address: [1, 255]!\n");
+			return ERROR;
+		}
+	}
+	settings.mbBaud = baud;
+	settings.mbType = mode;
+	settings.mbParity = parity;
+	settings.mbStopB = stopB;
+	settings.add = add;
+
+	memcpy(buff, &settings, sizeof(ModbusSetingsType));
+	if (OK != i2cMem8Write(dev, I2C_MODBUS_SETINGS_ADD, buff, 5))
+	{
+		printf("Fail to write RS485 settings!\n");
+		return ERROR;
+	}
+	return OK;
+}
+
+int cfg485Get(int dev)
+{
+	ModbusSetingsType settings;
+	u8 buff[5];
+
+	if (OK != i2cMem8Read(dev, I2C_MODBUS_SETINGS_ADD, buff, 5))
+	{
+		printf("Fail to read RS485 settings!\n");
+		return ERROR;
+	}
+	memcpy(&settings, buff, sizeof(ModbusSetingsType));
+	printf("<mode> <baudrate> <stopbits> <parity> <add> %d %d %d %d %d\n",
+		(int)settings.mbType, (int)settings.mbBaud, (int)settings.mbStopB,
+		(int)settings.mbParity, (int)settings.add);
+	return OK;
+}
+
+void doRs485Read(int argc, char *argv[]);
+const CliCmdType CMD_RS485_READ = {"cfg485rd", 2, &doRs485Read,
+	"\tcfg485rd:    Read the RS485 communication settings\n",
+	"\tUsage:      16relind <id> cfg485rd\n", "",
+	"\tExample:		16relind 0 cfg485rd; Read the RS485 settings on Board #0\n"};
+
+void doRs485Read(int argc, char *argv[])
+{
+	int dev = 0;
+
+	dev = doBoardInit(atoi(argv[1]));
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+
+	if (argc == 3)
+	{
+		if (OK != cfg485Get(dev))
+		{
+			exit(1);
+		}
+	}
+	else
+	{
+		printf("%s", CMD_RS485_READ.usage1);
+		exit(1);
+	}
+
+}
+
+void doRs485Write(int argc, char *argv[]);
+const CliCmdType CMD_RS485_WRITE =
+	{"cfg485wr", 2, &doRs485Write,
+		"\tcfg485wr:    Write the RS485 communication settings\n",
+		"\tUsage:      16relind <id> cfg485wr <mode> <baudrate> <stopBits> <parity> <slaveAddr>\n",
+		"",
+		"\tExample:		 16relind 0 cfg485wr 1 9600 1 0 1; Write the RS485 settings on Board #0 \n\t\t\t(mode = Modbus RTU; baudrate = 9600 bps; stop bits one; parity none; modbus slave address = 1)\n"};
+
+void doRs485Write(int argc, char *argv[])
+{
+	int dev = 0;
+	u8 mode = 0;
+	u32 baud = 1200;
+	u8 stopB = 1;
+	u8 parity = 0;
+	u8 add = 0;
+
+	dev = doBoardInit(atoi(argv[1]));
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+	if (argc == 8)
+	{
+		mode = 0xff & atoi(argv[3]);
+		baud = atoi(argv[4]);
+		stopB = 0xff & atoi(argv[5]);
+		parity = 0xff & atoi(argv[6]);
+		add = 0xff & atoi(argv[7]);
+		if (OK != cfg485Set(dev, mode, baud, stopB, parity, add))
+		{
+			exit(1);
+		}
+		printf("done\n");
+	}
+	else
+	{
+		printf("%s", CMD_RS485_WRITE.usage1);
+		exit(1);
+	}
+}
+
+const CliCmdType *gCmdArray[] = {&CMD_HELP, &CMD_WAR, &CMD_VERSION, &CMD_LIST,
+	&CMD_WRITE, &CMD_READ, &CMD_TEST, &CMD_LED_BLINK, &CMD_WDT_GET_INIT_PERIOD,
+	&CMD_WDT_GET_OFF_PERIOD, &CMD_WDT_GET_PERIOD, &CMD_WDT_RELOAD,
+	&CMD_WDT_SET_INIT_PERIOD, &CMD_WDT_SET_OFF_PERIOD, &CMD_WDT_SET_PERIOD,
+	&CMD_RS485_READ, &CMD_RS485_WRITE,
+	NULL, };
+
 static void doHelp(int argc, char *argv[])
 {
 	int i = 0;
 	if (argc == 3)
 	{
-		for (i = 0; i < CMD_ARRAY_SIZE; i++)
+		while (NULL != gCmdArray[i])
 		{
-			if ( (gCmdArray[i].name != NULL))
+			if ( (gCmdArray[i]->name != NULL))
 			{
-				if (strcasecmp(argv[2], gCmdArray[i].name) == 0)
+				if (strcasecmp(argv[2], gCmdArray[i]->name) == 0)
 				{
-					printf("%s%s%s%s", gCmdArray[i].help, gCmdArray[i].usage1,
-						gCmdArray[i].usage2, gCmdArray[i].example);
+					printf("%s%s%s%s", gCmdArray[i]->help, gCmdArray[i]->usage1,
+						gCmdArray[i]->usage2, gCmdArray[i]->example);
 					break;
 				}
 			}
+			i++;
 		}
 		if (CMD_ARRAY_SIZE == i)
 		{
 			printf("Option \"%s\" not found\n", argv[2]);
 			for (i = 0; i < CMD_ARRAY_SIZE; i++)
 			{
-				printf("%s", gCmdArray[i].help);
+				printf("%s", gCmdArray[i]->help);
 			}
 		}
 	}
 	else
 	{
-		for (i = 0; i < CMD_ARRAY_SIZE; i++)
+		while (NULL != gCmdArray[i])
 		{
-			printf("%s", gCmdArray[i].help);
+			printf("%s", gCmdArray[i]->help);
+			i++;
 		}
 	}
 }
@@ -755,29 +1205,29 @@ static void doWarranty(int argc UNU, char* argv[] UNU)
 	printf("%s\n", warranty);
 }
 
-static void cliInit(void)
-{
-	int i = 0;
-
-	memset(gCmdArray, 0, sizeof(CliCmdType) * CMD_ARRAY_SIZE);
-
-	memcpy(&gCmdArray[i], &CMD_HELP, sizeof(CliCmdType));
-	i++;
-	memcpy(&gCmdArray[i], &CMD_WAR, sizeof(CliCmdType));
-	i++;
-	memcpy(&gCmdArray[i], &CMD_LIST, sizeof(CliCmdType));
-	i++;
-	memcpy(&gCmdArray[i], &CMD_WRITE, sizeof(CliCmdType));
-	i++;
-	memcpy(&gCmdArray[i], &CMD_READ, sizeof(CliCmdType));
-	i++;
-	memcpy(&gCmdArray[i], &CMD_LED_BLINK, sizeof(CliCmdType));
-	i++;
-	memcpy(&gCmdArray[i], &CMD_TEST, sizeof(CliCmdType));
-	i++;
-	memcpy(&gCmdArray[i], &CMD_VERSION, sizeof(CliCmdType));
-
-}
+//static void cliInit(void)
+//{
+//	int i = 0;
+//
+//	memset(gCmdArray, 0, sizeof(CliCmdType) * CMD_ARRAY_SIZE);
+//
+//	memcpy(&gCmdArray[i], &CMD_HELP, sizeof(CliCmdType));
+//	i++;
+//	memcpy(&gCmdArray[i], &CMD_WAR, sizeof(CliCmdType));
+//	i++;
+//	memcpy(&gCmdArray[i], &CMD_LIST, sizeof(CliCmdType));
+//	i++;
+//	memcpy(&gCmdArray[i], &CMD_WRITE, sizeof(CliCmdType));
+//	i++;
+//	memcpy(&gCmdArray[i], &CMD_READ, sizeof(CliCmdType));
+//	i++;
+//	memcpy(&gCmdArray[i], &CMD_LED_BLINK, sizeof(CliCmdType));
+//	i++;
+//	memcpy(&gCmdArray[i], &CMD_TEST, sizeof(CliCmdType));
+//	i++;
+//	memcpy(&gCmdArray[i], &CMD_VERSION, sizeof(CliCmdType));
+//
+//}
 
 int waitForI2C(sem_t *sem)
 {
@@ -833,13 +1283,14 @@ int main(int argc, char *argv[])
 {
 	int i = 0;
 
-	cliInit();
+	//cliInit();
 
 	if (argc == 1)
 	{
-		for (i = 0; i < CMD_ARRAY_SIZE; i++)
+		while (NULL != gCmdArray[i])
 		{
-			printf("%s", gCmdArray[i].help);
+			printf("%s", gCmdArray[i]->help);
+			i++;
 		}
 		return 1;
 	}
@@ -847,24 +1298,28 @@ int main(int argc, char *argv[])
 	sem_t *semaphore = sem_open("/SMI2C_SEM", O_CREAT, 0000666, 3);
 	waitForI2C(semaphore);
 #endif
-	for (i = 0; i < CMD_ARRAY_SIZE; i++)
+	i = 0;
+	while (NULL != gCmdArray[i])
 	{
-		if ( (gCmdArray[i].name != NULL) && (gCmdArray[i].namePos < argc))
+		if ( (gCmdArray[i]->name != NULL) && (gCmdArray[i]->namePos < argc))
 		{
-			if (strcasecmp(argv[gCmdArray[i].namePos], gCmdArray[i].name) == 0)
+			if (strcasecmp(argv[gCmdArray[i]->namePos], gCmdArray[i]->name) == 0)
 			{
-				gCmdArray[i].pFunc(argc, argv);
+				gCmdArray[i]->pFunc(argc, argv);
 #ifdef THREAD_SAFE
 				releaseI2C(semaphore);
 #endif
 				return 0;
 			}
 		}
+		i++;
 	}
 	printf("Invalid command option\n");
-	for (i = 0; i < CMD_ARRAY_SIZE; i++)
+	i = 0;
+	while (NULL != gCmdArray[i])
 	{
-		printf("%s", gCmdArray[i].help);
+		printf("%s", gCmdArray[i]->help);
+		i++;
 	}
 #ifdef THREAD_SAFE
 	releaseI2C(semaphore);
