@@ -9,18 +9,18 @@
 #pip install multiio
 
 
-#with open("README.md", 'r') as f:
-#    long_description = f.read()
+with open("README.md", 'r') as f:
+    long_description = f.read()
 
 from setuptools import setup, find_packages
 setup(
-    name='SM16relind',
+    name='sm16relind',
     packages=find_packages(),
-    version='1.0.2',
+    version='1.0.4',
     license='MIT',
     description='Library to control Multi-IO Automation Card',
-    #long_description=long_description,
-    #long_description_content_type="text/markdown",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
     author='Sequent Microsystems',
     author_email='olcitu@gmail.com',
     url='https://sequentmicrosystems.com',

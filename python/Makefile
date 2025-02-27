@@ -9,7 +9,7 @@ DIST          = dist
 
 .PHONY: all dist markdown
 
-all: markdown dist
+all: dist
 	@echo "Everything done!"
 	@echo '  > Run "twine upload dist/*" to upload to pypi.org.'
 
