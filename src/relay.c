@@ -531,6 +531,41 @@ static void doLedSet(int argc, char *argv[])
 	}
 }
 
+
+void doBoard(int argc, char *argv[]);
+const CliCmdType CMD_BOARD =
+	{"board", 2, &doBoard,
+		"\tboard:      Display the board firmware version\n",
+		"\tUsage:      16relind <id> board\n", "",
+		"\tExample:    16relind 0 board; Display the Board #0 firmware version\n"};
+void doBoard(int argc, char *argv[])
+{
+	int dev = 0;
+	uint8_t buff[8];
+
+	dev = doBoardInit(atoi(argv[1]));
+	if (dev <= 0)
+	{
+		exit(1);
+	}
+
+	if (argc == 3)
+	{
+		if (OK != i2cMem8Read(dev, I2C_MEM_REVISION_MAJOR_ADD, buff, 2))
+		{
+			printf("Fail to read board version!\n");
+			exit(1);
+		}
+		
+		printf("Board Firmware Version: %02d.%02d\n", buff[0], buff[1]);
+		
+	}
+	else
+	{
+		printf("Invalid params number:\n %s", CMD_BOARD.usage1);
+		exit(1);
+	}
+}
 //************************************************************* WDT *************************************************
 
 void doWdtReload(int argc, char *argv[]);
@@ -978,7 +1013,7 @@ const CliCmdType *gCmdArray[] = {&CMD_HELP, &CMD_WAR, &CMD_VERSION, &CMD_LIST,
 	&CMD_WRITE, &CMD_READ, &CMD_TEST, &CMD_LED_BLINK, &CMD_WDT_GET_INIT_PERIOD,
 	&CMD_WDT_GET_OFF_PERIOD, &CMD_WDT_GET_PERIOD, &CMD_WDT_RELOAD,
 	&CMD_WDT_SET_INIT_PERIOD, &CMD_WDT_SET_OFF_PERIOD, &CMD_WDT_SET_PERIOD,
-	&CMD_RS485_READ, &CMD_RS485_WRITE,
+	&CMD_RS485_READ, &CMD_RS485_WRITE,&CMD_BOARD,
 	NULL, };
 
 static void doHelp(int argc, char *argv[])
