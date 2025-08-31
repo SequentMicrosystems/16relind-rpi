@@ -3,21 +3,23 @@ This is the command line to control the [Sixteen RELAYS 8-Layer Stackable HAT fo
 
 Don't forget to enable I2C communication:
 ```bash
-~$ sudo raspi-config
+sudo raspi-config
 ```
 ## Usage
 ```bash
-~$ git clone https://github.com/SequentMicrosystems/16relind-rpi.git
-~$ cd 16relind-rpi/
-~/16relind-rpi$ sudo make install
+cd
+git clone https://github.com/SequentMicrosystems/16relind-rpi.git
+cd 16relind-rpi/
+sudo make install
 ```
 Now you can access all the functions of the relays board through the command "16relind". Use -h option for help:
 ```bash
-~$ 16relind -h
+16relind -h
 ```
-If you clone the repository any update can be made with the following commands:
+If you clone the repository, any updates can be made with the following commands:
 ```bash
-~$ cd 16relind-rpi/  
-~/16relind-rpi$ git pull
-~/16relind-rpi$ sudo make install
+cd
+cd 16relind-rpi/  
+git pull
+sudo make install
 ```
