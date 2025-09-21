@@ -25,12 +25,13 @@
 
 #define VERSION_BASE	(int)1
 #define VERSION_MAJOR	(int)1
-#define VERSION_MINOR	(int)2
+#define VERSION_MINOR	(int)3
 
 #define UNUSED(X) (void)X      /* To avoid gcc/g++ warnings */
 #define CMD_ARRAY_SIZE	8
 
 #define THREAD_SAFE
+//#define DEBUG_SEM
 
 #define TIMEOUT_S 3
 
@@ -336,13 +337,13 @@ static void doRelayWrite(int argc, char *argv[])
 	{
 		printf("Usage: 16relind <id> write <relay number> <on/off> \n");
 		printf("Usage: 16relind <id> write <relay reg value> \n");
-		exit(1);
+		return;
 	}
 
 	dev = doBoardInit(atoi(argv[1]));
 	if (dev <= 0)
 	{
-		exit(1);
+		return;
 	}
 	if (argc == 5)
 	{
@@ -350,7 +351,7 @@ static void doRelayWrite(int argc, char *argv[])
 		if ( (pin < CHANNEL_NR_MIN) || (pin > RELAY_CH_NR_MAX))
 		{
 			printf("Relay number value out of range\n");
-			exit(1);
+			return;
 		}
 
 		/**/if ( (strcasecmp(argv[4], "up") == 0)
@@ -364,7 +365,7 @@ static void doRelayWrite(int argc, char *argv[])
 			if ( (atoi(argv[4]) >= STATE_COUNT) || (atoi(argv[4]) < 0))
 			{
 				printf("Invalid relay state!\n");
-				exit(1);
+				return;
 			}
 			state = (OutStateEnumType)atoi(argv[4]);
 		}
@@ -376,12 +377,12 @@ static void doRelayWrite(int argc, char *argv[])
 			if (OK != relayChSet(dev, pin, state))
 			{
 				printf("Fail to write relay\n");
-				exit(1);
+				return;
 			}
 			if (OK != relayChGet(dev, pin, &stateR))
 			{
 				printf("Fail to read relay\n");
-				exit(1);
+				return;
 			}
 			retry--;
 		}
@@ -394,7 +395,7 @@ static void doRelayWrite(int argc, char *argv[])
 		if (retry == 0)
 		{
 			printf("Fail to write relay\n");
-			exit(1);
+			return;
 		}
 	}
 	else
@@ -403,7 +404,7 @@ static void doRelayWrite(int argc, char *argv[])
 		if (val < 0 || val > 255)
 		{
 			printf("Invalid relay value\n");
-			exit(1);
+			return;
 		}
 
 		retry = RETRY_TIMES;
@@ -414,18 +415,18 @@ static void doRelayWrite(int argc, char *argv[])
 			if (OK != relaySet(dev, val))
 			{
 				printf("Fail to write relay!\n");
-				exit(1);
+				return;
 			}
 			if (OK != relayGet(dev, &valR))
 			{
 				printf("Fail to read relay!\n");
-				exit(1);
+				return;
 			}
 		}
 		if (retry == 0)
 		{
 			printf("Fail to write relay!\n");
-			exit(1);
+			return;
 		}
 	}
 }
@@ -445,7 +446,7 @@ static void doRelayRead(int argc, char *argv[])
 	dev = doBoardInit(atoi(argv[1]));
 	if (dev <= 0)
 	{
-		exit(1);
+		return;
 	}
 
 	if (argc == 4)
@@ -454,13 +455,13 @@ static void doRelayRead(int argc, char *argv[])
 		if ( (pin < CHANNEL_NR_MIN) || (pin > RELAY_CH_NR_MAX))
 		{
 			printf("Relay number value out of range!\n");
-			exit(1);
+			return;
 		}
 
 		if (OK != relayChGet(dev, pin, &state))
 		{
 			printf("Fail to read!\n");
-			exit(1);
+			return;
 		}
 		if (state != 0)
 		{
@@ -476,14 +477,14 @@ static void doRelayRead(int argc, char *argv[])
 		if (OK != relayGet(dev, &val))
 		{
 			printf("Fail to read!\n");
-			exit(1);
+			return;
 		}
 		printf("%d\n", val);
 	}
 	else
 	{
 		printf("Usage: %s read relay value\n", argv[0]);
-		exit(1);
+		return;
 	}
 }
 
@@ -497,7 +498,7 @@ static void doLedSet(int argc, char *argv[])
 		dev = doBoardInit(atoi(argv[1]));
 		if (dev <= 0)
 		{
-			exit(1);
+			return;
 		}
 		if (strcasecmp(argv[3], "on") == 0)
 		{
@@ -514,20 +515,20 @@ static void doLedSet(int argc, char *argv[])
 		else
 		{
 			printf("Invalid led mode (blink/on/off)\n");
-			exit(1);
+			return;
 		}
 		if (0 > i2cMem8Write(dev, I2C_MEM_LED_MODE, buff, 1))
 		{
 			printf(
 				"Fail to write, check if your card version supports the command\n");
-			exit(1);
+			return;
 		}
 
 	}
 	else
 	{
 		printf("%s", CMD_LED_BLINK.usage1);
-		exit(1);
+		return;
 	}
 }
 
@@ -546,7 +547,7 @@ void doBoard(int argc, char *argv[])
 	dev = doBoardInit(atoi(argv[1]));
 	if (dev <= 0)
 	{
-		exit(1);
+		return;//return;
 	}
 
 	if (argc == 3)
@@ -554,7 +555,7 @@ void doBoard(int argc, char *argv[])
 		if (OK != i2cMem8Read(dev, I2C_MEM_REVISION_MAJOR_ADD, buff, 2))
 		{
 			printf("Fail to read board version!\n");
-			exit(1);
+			return;//return;
 		}
 		
 		printf("Board Firmware Version: %02d.%02d\n", buff[0], buff[1]);
@@ -563,7 +564,7 @@ void doBoard(int argc, char *argv[])
 	else
 	{
 		printf("Invalid params number:\n %s", CMD_BOARD.usage1);
-		exit(1);
+		return;//return;
 	}
 }
 //************************************************************* WDT *************************************************
@@ -583,7 +584,7 @@ void doWdtReload(int argc, char *argv[])
 	dev = doBoardInit(atoi(argv[1]));
 	if (dev <= 0)
 	{
-		exit(1);
+		return;
 	}
 
 	if (argc == 3)
@@ -592,13 +593,13 @@ void doWdtReload(int argc, char *argv[])
 		if (OK != i2cMem8Write(dev, I2C_MEM_WDT_RESET_ADD, buff, 1))
 		{
 			printf("Fail to write watchdog reset key!\n");
-			exit(1);
+			return;
 		}
 	}
 	else
 	{
 		printf("Invalid params number:\n %s", CMD_WDT_RELOAD.usage1);
-		exit(1);
+		return;
 	}
 }
 
@@ -618,7 +619,7 @@ void doWdtSetPeriod(int argc, char *argv[])
 	dev = doBoardInit(atoi(argv[1]));
 	if (dev <= 0)
 	{
-		exit(1);
+		return;
 	}
 
 	if (argc == 4)
@@ -627,19 +628,19 @@ void doWdtSetPeriod(int argc, char *argv[])
 		if (0 == period)
 		{
 			printf("Invalid period!\n");
-			exit(1);
+			return;
 		}
 		memcpy(buff, &period, 2);
 		if (OK != i2cMem8Write(dev, I2C_MEM_WDT_INTERVAL_SET_ADD, buff, 2))
 		{
 			printf("Fail to write watchdog period!\n");
-			exit(1);
+			return;
 		}
 	}
 	else
 	{
 		printf("Invalid params number:\n %s", CMD_WDT_SET_PERIOD.usage1);
-		exit(1);
+		return;
 	}
 
 }
@@ -660,7 +661,7 @@ void doWdtGetPeriod(int argc, char *argv[])
 	dev = doBoardInit(atoi(argv[1]));
 	if (dev <= 0)
 	{
-		exit(1);
+		return;
 	}
 
 	if (argc == 3)
@@ -668,7 +669,7 @@ void doWdtGetPeriod(int argc, char *argv[])
 		if (OK != i2cMem8Read(dev, I2C_MEM_WDT_INTERVAL_GET_ADD, buff, 2))
 		{
 			printf("Fail to read watchdog period!\n");
-			exit(1);
+			return;
 		}
 		memcpy(&period, buff, 2);
 		printf("%d\n", (int)period);
@@ -676,7 +677,7 @@ void doWdtGetPeriod(int argc, char *argv[])
 	else
 	{
 		printf("Invalid params number:\n %s", CMD_WDT_GET_PERIOD.usage1);
-		exit(1);
+		return;
 	}
 
 }
@@ -697,7 +698,7 @@ void doWdtSetInitPeriod(int argc, char *argv[])
 	dev = doBoardInit(atoi(argv[1]));
 	if (dev <= 0)
 	{
-		exit(1);
+		return;
 	}
 
 	if (argc == 4)
@@ -706,19 +707,19 @@ void doWdtSetInitPeriod(int argc, char *argv[])
 		if (0 == period)
 		{
 			printf("Invalid period!\n");
-			exit(1);
+			return;
 		}
 		memcpy(buff, &period, 2);
 		if (OK != i2cMem8Write(dev, I2C_MEM_WDT_INIT_INTERVAL_SET_ADD, buff, 2))
 		{
 			printf("Fail to write watchdog period!\n");
-			exit(1);
+			return;
 		}
 	}
 	else
 	{
 		printf("Invalid params number:\n %s", CMD_WDT_SET_INIT_PERIOD.usage1);
-		exit(1);
+		return;
 	}
 
 }
@@ -739,7 +740,7 @@ void doWdtGetInitPeriod(int argc, char *argv[])
 	dev = doBoardInit(atoi(argv[1]));
 	if (dev <= 0)
 	{
-		exit(1);
+		return;
 	}
 
 	if (argc == 3)
@@ -747,7 +748,7 @@ void doWdtGetInitPeriod(int argc, char *argv[])
 		if (OK != i2cMem8Read(dev, I2C_MEM_WDT_INIT_INTERVAL_GET_ADD, buff, 2))
 		{
 			printf("Fail to read watchdog period!\n");
-			exit(1);
+			return;
 		}
 		memcpy(&period, buff, 2);
 		printf("%d\n", (int)period);
@@ -755,7 +756,7 @@ void doWdtGetInitPeriod(int argc, char *argv[])
 	else
 	{
 		printf("Invalid params number:\n %s", CMD_WDT_GET_INIT_PERIOD.usage1);
-		exit(1);
+		return;
 	}
 
 }
@@ -776,7 +777,7 @@ void doWdtSetOffPeriod(int argc, char *argv[])
 	dev = doBoardInit(atoi(argv[1]));
 	if (dev <= 0)
 	{
-		exit(1);
+		return;
 	}
 
 	if (argc == 4)
@@ -785,20 +786,20 @@ void doWdtSetOffPeriod(int argc, char *argv[])
 		if ( (0 == period) || (period > WDT_MAX_OFF_INTERVAL_S))
 		{
 			printf("Invalid period!\n");
-			exit(1);
+			return;
 		}
 		memcpy(buff, &period, 4);
 		if (OK
 			!= i2cMem8Write(dev, I2C_MEM_WDT_POWER_OFF_INTERVAL_SET_ADD, buff, 4))
 		{
 			printf("Fail to write watchdog period!\n");
-			exit(1);
+			return;
 		}
 	}
 	else
 	{
 		printf("Invalid params number:\n %s", CMD_WDT_SET_OFF_PERIOD.usage1);
-		exit(1);
+		return;
 	}
 
 }
@@ -819,7 +820,7 @@ void doWdtGetOffPeriod(int argc, char *argv[])
 	dev = doBoardInit(atoi(argv[1]));
 	if (dev <= 0)
 	{
-		exit(1);
+		return;
 	}
 
 	if (argc == 3)
@@ -828,7 +829,7 @@ void doWdtGetOffPeriod(int argc, char *argv[])
 			!= i2cMem8Read(dev, I2C_MEM_WDT_POWER_OFF_INTERVAL_GET_ADD, buff, 4))
 		{
 			printf("Fail to read watchdog period!\n");
-			exit(1);
+			return;
 		}
 		memcpy(&period, buff, 4);
 		printf("%d\n", (int)period);
@@ -836,7 +837,7 @@ void doWdtGetOffPeriod(int argc, char *argv[])
 	else
 	{
 		printf("Invalid params number:\n %s", CMD_WDT_GET_OFF_PERIOD.usage1);
-		exit(1);
+		return;
 	}
 
 }
@@ -949,20 +950,20 @@ void doRs485Read(int argc, char *argv[])
 	dev = doBoardInit(atoi(argv[1]));
 	if (dev <= 0)
 	{
-		exit(1);
+		return;
 	}
 
 	if (argc == 3)
 	{
 		if (OK != cfg485Get(dev))
 		{
-			exit(1);
+			return;
 		}
 	}
 	else
 	{
 		printf("%s", CMD_RS485_READ.usage1);
-		exit(1);
+		return;
 	}
 
 }
@@ -987,7 +988,7 @@ void doRs485Write(int argc, char *argv[])
 	dev = doBoardInit(atoi(argv[1]));
 	if (dev <= 0)
 	{
-		exit(1);
+		return;
 	}
 	if (argc == 8)
 	{
@@ -998,14 +999,14 @@ void doRs485Write(int argc, char *argv[])
 		add = 0xff & atoi(argv[7]);
 		if (OK != cfg485Set(dev, mode, baud, stopB, parity, add))
 		{
-			exit(1);
+			return;
 		}
 		printf("done\n");
 	}
 	else
 	{
 		printf("%s", CMD_RS485_WRITE.usage1);
-		exit(1);
+		return;
 	}
 }
 
@@ -1120,7 +1121,7 @@ static void doTest(int argc, char *argv[])
 	dev = doBoardInit(atoi(argv[1]));
 	if (dev <= 0)
 	{
-		exit(1);
+		return;
 	}
 	if (argc == 4)
 	{
@@ -1169,7 +1170,7 @@ static void doTest(int argc, char *argv[])
 					printf("Fail to write relay\n");
 					if (file)
 						fclose(file);
-					exit(1);
+					return;
 				}
 				busyWait(150);
 			}
@@ -1200,7 +1201,7 @@ static void doTest(int argc, char *argv[])
 					printf("Fail to write relay!\n");
 					if (file)
 						fclose(file);
-					exit(1);
+					return;
 				}
 				busyWait(150);
 			}
@@ -1299,6 +1300,10 @@ int releaseI2C(sem_t *sem)
 {
 	int semVal = 2;
 	sem_getvalue(sem, &semVal);
+#ifdef DEBUG_SEM
+	sem_getvalue(sem, &semVal);
+	printf("Semaphore before post %d\n", semVal);
+#endif
 	if (semVal < 1)
 	{
 		if (sem_post(sem) == -1)
