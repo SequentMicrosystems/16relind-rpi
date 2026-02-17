@@ -1,8 +1,8 @@
 /*
  * relay.c:
  *	Command-line interface to the Raspberry
- *	Pi's 8-Relay Industrial board.
- *	Copyright (c) 2016-2021 Sequent Microsystem
+ *	Pi's 816-Relay Industrial board.
+ *	Copyright (c) 2016-2026 Sequent Microsystem
  *	<http://www.sequentmicrosystem.com>
  ***********************************************************************
  *	Author: Alexandru Burcea
@@ -25,7 +25,7 @@
 
 #define VERSION_BASE	(int)1
 #define VERSION_MAJOR	(int)1
-#define VERSION_MINOR	(int)3
+#define VERSION_MINOR	(int)5
 
 #define UNUSED(X) (void)X      /* To avoid gcc/g++ warnings */
 #define CMD_ARRAY_SIZE	8
@@ -86,6 +86,34 @@ const CliCmdType CMD_READ = {"read", 2, &doRelayRead,
 	"\tUsage:       16relind <id> read\n",
 	"\tExample:     16relind 0 read 2; Read Status of Relay #2 on Board #0\n"};
 
+static void doRelayFailsafeEnWrite(int argc, char *argv[]);
+const CliCmdType CMD_FAILSAFE_EN_WRITE = {"fsenwr", 2, &doRelayFailsafeEnWrite,
+	"\tfsenwr:       Enable/disable the failsafe state for a relay\n",
+	"\tUsage:       16relind <id> fsenwr <channel> <on/off>\n",
+	"\tUsage:       16relind <id> fsenwr <value>\n",
+	"\tExample:     16relind 0 fsenwr 2 On; Enable failsafe state for Relay #2 on Board #0 \n"};
+
+static void doRelayFailsafeEnRead(int argc, char *argv[]);
+const CliCmdType CMD_FAILSAFE_EN_READ = {"fsenrd", 2, &doRelayFailsafeEnRead,
+	"\tfsenrd:       Read the failsafe state enable for a relay\n",
+	"\tUsage:       16relind <id> fsenrd <channel>\n",
+	"\tUsage:       16relind <id> fsenrd\n",
+	"\tExample:     16relind 0 fsenrd 2; Read if failsafe state is enabled for Relay #2 on Board #0 \n"};
+
+static void doRelayFailsafeStateWrite(int argc, char *argv[]);
+const CliCmdType CMD_FAILSAFE_STATE_WRITE = {"fsvwr", 2, &doRelayFailsafeStateWrite,
+	"\tfsvwr:       Enable/disable the failsafe state for a relay\n",
+	"\tUsage:       16relind <id> fsvwr <channel> <on/off>\n",
+	"\tUsage:       16relind <id> fsvwr <value>\n",
+	"\tExample:     16relind 0 fsvwr 2 On; Set failsafe state for Relay #2 on Board #0 to ON\n"};
+	
+static void doRelayFailsafeStateRead(int argc, char *argv[]);
+const CliCmdType CMD_FAILSAFE_STATE_READ = {"fsvrd", 2, &doRelayFailsafeStateRead,
+	"\tfsvrd:       Read the failsafe state for a relay\n",
+	"\tUsage:       16relind <id> fsvrd	 <channel>\n",
+	"\tUsage:       16relind <id> fsvrd\n",
+	"\tExample:     16relind 0 fsvrd 2; Read failsafe state for Relay #2 on Board #0 \n"};	
+
 static void doLedSet(int argc, char *argv[]);
 const CliCmdType CMD_LED_BLINK = {"pled", 2, &doLedSet,
 	"\tpled:        Set the power led mode (blink | on | off) \n",
@@ -111,7 +139,7 @@ char *usage = "Usage:	 16relind -h <command>\n"
 	"Type 16relind -h <command> for more help"; // No trailing newline needed here.
 
 char *warranty =
-	"	       Copyright (c) 2016-2020 Sequent Microsystems\n"
+	"	       Copyright (c) 2016-2026 Sequent Microsystems\n"
 		"                                                             \n"
 		"		This program is free software; you can redistribute it and/or modify\n"
 		"		it under the terms of the GNU Leser General Public License as published\n"
@@ -247,6 +275,203 @@ int relayGet(int dev, int *val)
 	*val = IOToRelay(rVal);
 	return OK;
 }
+// enable failsafe state for each relay, 0 = off, 1 = on
+int relayFailsafeEnChSet(int dev, u8 channel, OutStateEnumType state)
+{
+	int resp;
+	u8 buff[2];
+	u16 val = 0;
+
+	if ( (channel < CHANNEL_NR_MIN) || (channel > RELAY_CH_NR_MAX))
+	{
+		printf("Invalid relay nr!\n");
+		return ERROR;
+	}
+	if (FAIL == i2cMem8Read(dev, I2C_MEM_RELAY_FAILSAFE_EN_ADD, buff, 2))
+	{
+		return FAIL;
+	}
+	memcpy(&val, buff, 2);
+	switch (state)
+	{
+	case OFF:
+		val &= ~ (1 << relayChRemap[channel - 1]);
+		memcpy(buff, &val, 2);
+		resp = i2cMem8Write(dev, I2C_MEM_RELAY_FAILSAFE_EN_ADD, buff, 2);
+		break;
+	case ON:
+		val |= 1 << relayChRemap[channel - 1];
+		memcpy(buff, &val, 2);
+		resp = i2cMem8Write(dev, I2C_MEM_RELAY_FAILSAFE_EN_ADD, buff, 2);
+		break;
+	default:
+		printf("Invalid relay state!\n");
+		return ERROR;
+		break;
+	}
+	return resp;
+}
+
+int relayFailsafeEnChGet(int dev, u8 channel, OutStateEnumType *state)
+{
+	u8 buff[2];
+	u16 val;
+
+	if (NULL == state)
+	{
+		return ERROR;
+	}
+
+	if ( (channel < CHANNEL_NR_MIN) || (channel > RELAY_CH_NR_MAX))
+	{
+		printf("Invalid relay nr!\n");
+		return ERROR;
+	}
+
+	if (FAIL == i2cMem8Read(dev, I2C_MEM_RELAY_FAILSAFE_EN_ADD, buff, 2))
+	{
+		return ERROR;
+	}
+	memcpy(&val, buff, 2);
+	if (val & (1 << relayChRemap[channel - 1]))
+	{
+		*state = ON;
+	}
+	else
+	{
+		*state = OFF;
+	}
+	return OK;
+}
+
+int relayFailsafeEnSet(int dev, int val)
+{
+	u8 buff[2];
+	u16 rVal = 0;
+
+	rVal = relayToIO(0xffff & val);
+	memcpy(buff, &rVal, 2);
+
+	return i2cMem8Write(dev, I2C_MEM_RELAY_FAILSAFE_EN_ADD, buff, 2);
+}
+
+int relayFailsafeEnGet(int dev, int *val)
+{
+	u8 buff[2];
+	u16 rVal = 0;
+
+	if (NULL == val)
+	{
+		return ERROR;
+	}
+	if (FAIL == i2cMem8Read(dev, I2C_MEM_RELAY_FAILSAFE_EN_ADD, buff, 2))
+	{
+		return ERROR;
+	}
+	memcpy(&rVal, buff, 2);
+	*val = IOToRelay(rVal);
+	return OK;
+}
+
+// set/get failsafe state for each relay, 0 = off, 1 = on
+int relayFailsafeStateChSet(int dev, u8 channel, OutStateEnumType state)
+{
+	int resp;
+	u8 buff[2];
+	u16 val = 0;
+
+	if ( (channel < CHANNEL_NR_MIN) || (channel > RELAY_CH_NR_MAX))
+	{
+		printf("Invalid relay nr!\n");
+		return ERROR;
+	}
+	if (FAIL == i2cMem8Read(dev, 	I2C_MEM_RELAY_FAILSAFE_VAL_ADD, buff, 2))
+	{
+		return FAIL;
+	}
+	memcpy(&val, buff, 2);
+	switch (state)
+	{
+	case OFF:
+		val &= ~ (1 << relayChRemap[channel - 1]);
+		memcpy(buff, &val, 2);
+		resp = i2cMem8Write(dev, I2C_MEM_RELAY_FAILSAFE_VAL_ADD, buff, 2);
+		break;
+	case ON:
+		val |= 1 << relayChRemap[channel - 1];
+		memcpy(buff, &val, 2);
+		resp = i2cMem8Write(dev, I2C_MEM_RELAY_FAILSAFE_VAL_ADD, buff, 2);
+		break;
+	default:
+		printf("Invalid relay state!\n");
+		return ERROR;
+		break;
+	}
+	return resp;
+}
+
+int relayFailsafeStateChGet(int dev, u8 channel, OutStateEnumType *state)
+{
+	u8 buff[2];
+	u16 val;
+
+	if (NULL == state)
+	{
+		return ERROR;
+	}
+
+	if ( (channel < CHANNEL_NR_MIN) || (channel > RELAY_CH_NR_MAX))
+	{
+		printf("Invalid relay nr!\n");
+		return ERROR;
+	}
+
+	if (FAIL == i2cMem8Read(dev, I2C_MEM_RELAY_FAILSAFE_VAL_ADD, buff, 2))
+	{
+		return ERROR;
+	}
+	memcpy(&val, buff, 2);
+	if (val & (1 << relayChRemap[channel - 1]))
+	{
+		*state = ON;
+	}
+	else
+	{
+		*state = OFF;
+	}
+	return OK;
+}
+
+int relayFailsafeStateSet(int dev, int val)
+{
+	u8 buff[2];
+	u16 rVal = 0;
+
+	rVal = relayToIO(0xffff & val);
+	memcpy(buff, &rVal, 2);
+
+	return i2cMem8Write(dev, I2C_MEM_RELAY_FAILSAFE_VAL_ADD, buff, 2);
+}
+
+int relayFailsafeStateGet(int dev, int *val)
+{
+	u8 buff[2];
+	u16 rVal = 0;
+
+	if (NULL == val)
+	{
+		return ERROR;
+	}
+	if (FAIL == i2cMem8Read(dev, I2C_MEM_RELAY_FAILSAFE_VAL_ADD, buff, 2))
+	{
+		return ERROR;
+	}
+	memcpy(&rVal, buff, 2);
+	*val = IOToRelay(rVal);
+	return OK;
+}
+
+
 
 int doBoardInit(int stack)
 {
@@ -484,6 +709,269 @@ static void doRelayRead(int argc, char *argv[])
 	else
 	{
 		printf("Usage: %s read relay value\n", argv[0]);
+		return;
+	}
+}
+
+void doRelayFailsafeEnWrite(int argc, char *argv[])
+{
+	int pin = 0;
+	OutStateEnumType state = STATE_COUNT;
+	int val = 0;
+	int dev = 0;
+	
+	int valR = 0;
+	int retry = 0;
+
+	if ( (argc != 5) && (argc != 4))
+	{
+		printf("Usage: 16relind <id> fsenwr <relay number> <on/off> \n");
+		printf("Usage: 16relind <id> fsenwr <relay reg value> \n");
+		return;
+	}
+
+	dev = doBoardInit(atoi(argv[1]));
+	if (dev <= 0)
+	{
+		return;
+	}
+	if (argc == 5)
+	{
+		pin = atoi(argv[3]);
+		if ( (pin < CHANNEL_NR_MIN) || (pin > RELAY_CH_NR_MAX))
+		{
+			printf("Relay number value out of range\n");
+			return;
+		}
+
+		/**/if ( (strcasecmp(argv[4], "up") == 0)
+			|| (strcasecmp(argv[4], "on") == 0))
+			state = ON;
+		else if ( (strcasecmp(argv[4], "down") == 0)
+			|| (strcasecmp(argv[4], "off") == 0))
+			state = OFF;
+		else
+		{
+			if ( (atoi(argv[4]) >= STATE_COUNT) || (atoi(argv[4]) < 0))
+			{
+				printf("Invalid relay state!\n");
+				return;
+			}
+			state = (OutStateEnumType)atoi(argv[4]);
+		}
+
+		
+		if (OK != relayFailsafeEnChSet(dev, pin, state))
+		{
+			printf("Fail to write relay failsafe enable\n");
+			return;
+		}
+	}
+	else
+	{
+		val = atoi(argv[3]);
+		if (val < 0 || val > 255)
+		{
+			printf("Invalid relay value\n");
+			return;
+		}
+
+		retry = RETRY_TIMES;
+		valR = -1;
+		while ( (retry > 0) && (valR != val))
+		{
+
+			if (OK != relayFailsafeEnSet(dev, val))
+			{
+				printf("Fail to write relay failsafe enable!\n");
+				return;
+			}
+			if (OK != relayFailsafeEnGet(dev, &valR))
+			{
+				printf("Fail to read relay failsafe enable!\n");
+				return;
+			}
+		}
+		if (retry == 0)
+		{
+			printf("Fail to write relay failsafe enable!\n");
+			return;
+		}
+	}
+}
+
+void doRelayFailsafeEnRead(int argc, char *argv[])
+{
+	int pin = 0;
+	int val = 0;
+	int dev = 0;
+	OutStateEnumType state = STATE_COUNT;
+
+	dev = doBoardInit(atoi(argv[1]));
+	if (dev <= 0)
+	{
+		return;
+	}
+
+	if (argc == 4)
+	{
+		pin = atoi(argv[3]);
+		if ( (pin < CHANNEL_NR_MIN) || (pin > RELAY_CH_NR_MAX))
+		{
+			printf("Relay number value out of range!\n");
+			return;
+		}
+
+		if (OK != relayFailsafeEnChGet(dev, pin, &state))
+		{
+			printf("Fail to read!\n");
+			return;
+		}
+		if (state != 0)
+		{
+			printf("1\n");
+		}
+		else
+		{
+			printf("0\n");
+		}
+	}
+	else if (argc == 3)
+	{
+		if (OK != relayFailsafeEnGet(dev, &val))
+		{
+			printf("Fail to read!\n");
+			return;
+		}
+		printf("%d\n", val);
+	}
+	else
+	{
+		printf("Usage: %s fsenrd relay failsafe enable value\n", argv[0]);
+		return;
+	}
+}
+
+void doRelayFailsafeStateWrite(int argc, char *argv[])
+{
+	int pin = 0;
+	OutStateEnumType state = STATE_COUNT;
+	int val = 0;
+	int dev = 0;
+	
+
+	if ( (argc != 5) && (argc != 4))
+	{
+		printf("Usage: 16relind <id> fstwr <relay number> <on/off> \n");
+		printf("Usage: 16relind <id> fstwr <relay reg value> \n");
+		return;
+	}
+
+	dev = doBoardInit(atoi(argv[1]));
+	if (dev <= 0)
+	{
+		return;
+	}
+	if (argc == 5)
+	{
+		pin = atoi(argv[3]);
+		if ( (pin < CHANNEL_NR_MIN) || (pin > RELAY_CH_NR_MAX))
+		{
+			printf("Relay number value out of range\n");
+			return;
+		}
+
+		/**/if ( (strcasecmp(argv[4], "up") == 0)
+			|| (strcasecmp(argv[4], "on") == 0))
+			state = ON;
+		else if ( (strcasecmp(argv[4], "down") == 0)
+			|| (strcasecmp(argv[4], "off") == 0))
+			state = OFF;
+		else
+		{
+			if ( (atoi(argv[4]) >= STATE_COUNT) || (atoi(argv[4]) < 0))
+			{
+				printf("Invalid relay state!\n");
+				return;
+			}
+			state = (OutStateEnumType)atoi(argv[4]);
+		}
+
+		
+		if (OK != relayFailsafeStateChSet(dev, pin, state))
+		{
+			printf("Fail to write relay failsafe state\n");
+			return;
+		}
+	}
+	else
+	{
+		val = atoi(argv[3]);
+		if (val < 0 || val > 255)
+		{
+			printf("Invalid relay value\n");
+			return;
+		}
+
+		
+		if (OK != relayFailsafeStateSet(dev, val))
+		{
+			printf("Fail to write relay failsafe state!\n");
+			return;
+		}
+		
+	
+	}
+}
+
+void doRelayFailsafeStateRead(int argc, char *argv[])
+{
+	int pin = 0;
+	int val = 0;
+	int dev = 0;
+	OutStateEnumType state = STATE_COUNT;
+
+	dev = doBoardInit(atoi(argv[1]));
+	if (dev <= 0)
+	{
+		return;
+	}
+
+	if (argc == 4)
+	{
+		pin = atoi(argv[3]);
+		if ( (pin < CHANNEL_NR_MIN) || (pin > RELAY_CH_NR_MAX))
+		{
+			printf("Relay number value out of range!\n");
+			return;
+		}
+
+		if (OK != relayFailsafeStateChGet(dev, pin, &state))
+		{
+			printf("Fail to read!\n");
+			return;
+		}
+		if (state != 0)
+		{
+			printf("1\n");
+		}
+		else
+		{
+			printf("0\n");
+		}
+	}
+	else if (argc == 3)
+	{
+		if (OK != relayFailsafeStateGet(dev, &val))
+		{
+			printf("Fail to read!\n");
+			return;
+		}
+		printf("%d\n", val);
+	}
+	else
+	{
+		printf("Usage: %s fstrd relay failsafe state value\n", argv[0]);
 		return;
 	}
 }
@@ -1011,7 +1499,8 @@ void doRs485Write(int argc, char *argv[])
 }
 
 const CliCmdType *gCmdArray[] = {&CMD_HELP, &CMD_WAR, &CMD_VERSION, &CMD_LIST,
-	&CMD_WRITE, &CMD_READ, &CMD_TEST, &CMD_LED_BLINK, &CMD_WDT_GET_INIT_PERIOD,
+	&CMD_WRITE, &CMD_READ, &CMD_TEST, &CMD_FAILSAFE_EN_READ, &CMD_FAILSAFE_STATE_READ, 
+	&CMD_FAILSAFE_EN_WRITE, &CMD_FAILSAFE_STATE_WRITE, &CMD_LED_BLINK, &CMD_WDT_GET_INIT_PERIOD,
 	&CMD_WDT_GET_OFF_PERIOD, &CMD_WDT_GET_PERIOD, &CMD_WDT_RELOAD,
 	&CMD_WDT_SET_INIT_PERIOD, &CMD_WDT_SET_OFF_PERIOD, &CMD_WDT_SET_PERIOD,
 	&CMD_RS485_READ, &CMD_RS485_WRITE,&CMD_BOARD,
@@ -1058,7 +1547,7 @@ static void doVersion(int argc, char *argv[])
 {
 	UNUSED(argc);
 	UNUSED(argv);
-	printf("16relind v%d.%d.%d Copyright (c) 2016 - 2020 Sequent Microsystems\n",
+	printf("16relind v%d.%d.%d Copyright (c) 2016 - 2026 Sequent Microsystems\n",
 	VERSION_BASE, VERSION_MAJOR, VERSION_MINOR);
 	printf("\nThis is free software with ABSOLUTELY NO WARRANTY.\n");
 	printf("For details type: 16relind -warranty\n");
